@@ -37,6 +37,9 @@ class MinecraftBot extends EventEmitter {
       port: this.config.port || 25565,
       username: this.config.username,
       auth: this.config.auth || 'offline',
+      physicsEnabled: false, // Turn off physics during handshake to prevent 1.21+ server kicks
+      checkTimeoutInterval: 60000, // Increase timeouts to handle large 1.21.4 registry transfers
+      closeTimeout: 60000
     };
 
     // If version is false or undefined, mineflayer will auto-detect
@@ -84,6 +87,7 @@ class MinecraftBot extends EventEmitter {
     });
 
     this.bot.on('spawn', () => {
+      this.bot.physicsEnabled = true; // Re-enable physics once spawned in world
       this.log('Bot spawned in the world.', 'success');
       this.emit('status', {
         online: true,
