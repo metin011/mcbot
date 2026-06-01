@@ -3,7 +3,7 @@
   "port": 25752,
   "username": "MagmaAFK",
   "auth": "offline",
-  "version": false,
+  "version": "1.21.4",
   "reconnectDelay": 10000,
   "afk": {
     "enabled": true,
