@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MagmaNode Minecraft AFK Bot Dashboard</title>
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Premium glassmorphic dashboard to monitor, configure, and control your Minecraft AFK bot 24/7 on MagmaNode hosting.">
+  <meta name="author" content="Antigravity">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons for modern aesthetic -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Vanilla CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="glass-bg"></div>
+  <div class="glow-orb" id="orb-1"></div>
+  <div class="glow-orb" id="orb-2"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="main-header glass-card">
+      <div class="header-logo">
+        <i class="fa-solid fa-cube logo-icon"></i>
+        <div>
+          <h1 id="app-title">MagmaNode Bot Manager</h1>
+          <p class="subtitle">24/7 Anti-AFK Server Keep-Alive</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <span id="connection-badge" class="badge badge-offline">
+          <i class="fa-solid fa-circle-dot"></i> <span id="badge-text">Offline</span>
+        </span>
+        <div class="quick-power-btns">
+          <button id="btn-start" class="btn btn-success" title="Start Bot">
+            <i class="fa-solid fa-play"></i> Start
+          </button>
+          <button id="btn-stop" class="btn btn-danger" title="Stop Bot" disabled>
+            <i class="fa-solid fa-stop"></i> Stop
+          </button>
+          <button id="btn-restart" class="btn btn-secondary" title="Restart Bot" disabled>
+            <i class="fa-solid fa-arrows-rotate"></i> Restart
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="dashboard-grid">
+      <!-- Left Column: Stats & Console -->
+      <section class="left-column">
+        <!-- Stats Row -->
+        <div class="stats-row">
+          <div class="stat-card glass-card" id="stat-ping">
+            <div class="stat-icon pink-glow"><i class="fa-solid fa-gauge-high"></i></div>
+            <div class="stat-details">
+              <span class="stat-label">Latency</span>
+              <span class="stat-value" id="val-ping">-- ms</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" id="stat-pos">
+            <div class="stat-icon blue-glow"><i class="fa-solid fa-location-crosshairs"></i></div>
+            <div class="stat-details">
+              <span class="stat-label">Position</span>
+              <span class="stat-value" id="val-coords">X: - Y: - Z: -</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" id="stat-vitals">
+            <div class="stat-icon green-glow"><i class="fa-solid fa-heart"></i></div>
+            <div class="stat-details">
+              <span class="stat-label">Vitals (HP / Food)</span>
+              <span class="stat-value" id="val-vitals">-- / --</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" id="stat-players">
+            <div class="stat-icon gold-glow"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-details">
+              <span class="stat-label">Players Online</span>
+              <span class="stat-value" id="val-players">0 online</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal Console -->
+        <div class="console-container glass-card">
+          <div class="console-header">
+            <div class="console-title">
+              <i class="fa-solid fa-terminal console-icon"></i>
+              <h2>Bot Live Terminal Logs</h2>
+            </div>
+            <div class="console-actions">
+              <button id="btn-clear-console" class="btn-icon" title="Clear Console">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+              <button id="btn-autoscroll" class="btn-icon active" title="Toggle Auto Scroll">
+                <i class="fa-solid fa-arrow-down-long"></i>
+              </button>
+            </div>
+          </div>
+          <div class="console-body" id="console-logs">
+            <div class="log-entry system">
+              <span class="log-time">[00:00:00]</span>
+              <span class="log-msg">Welcome to MagmaNode AFK Bot Panel. Awaiting connection...</span>
+            </div>
+          </div>
+          <div class="console-input-area">
+            <input type="text" id="chat-input" placeholder="Type a chat message or Minecraft command (e.g. hello, /say hi)..." disabled>
+            <button id="btn-send-chat" class="btn btn-primary" disabled>
+              <i class="fa-solid fa-paper-plane"></i> Send
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Settings & Controls -->
+      <section class="right-column">
+        <!-- Manual Actions Card -->
+        <div class="actions-card glass-card">
+          <div class="card-header">
+            <i class="fa-solid fa-gamepad card-icon"></i>
+            <h2>Manual AFK Actions</h2>
+          </div>
+          <div class="actions-grid">
+            <button class="action-btn" data-action="jump" id="manual-jump" disabled>
+              <i class="fa-solid fa-person-running"></i>
+              <span>Jump</span>
+            </button>
+            <button class="action-btn" data-action="swing" id="manual-swing" disabled>
+              <i class="fa-solid fa-hand-fist"></i>
+              <span>Swing Arm</span>
+            </button>
+            <button class="action-btn" data-action="look" id="manual-look" disabled>
+              <i class="fa-solid fa-eye"></i>
+              <span>Look Around</span>
+            </button>
+            <button class="action-btn" data-action="walk" id="manual-walk" disabled>
+              <i class="fa-solid fa-shoe-prints"></i>
+              <span>Short Walk</span>
+            </button>
+            <button class="action-btn" data-action="sneak" id="manual-sneak" disabled>
+              <i class="fa-solid fa-user-ninja"></i>
+              <span>Sneak</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Configuration Settings Card -->
+        <div class="settings-card glass-card">
+          <div class="card-header">
+            <i class="fa-solid fa-sliders card-icon"></i>
+            <h2>Bot Configurations</h2>
+          </div>
+          <form id="config-form">
+            <!-- Connection Settings -->
+            <fieldset class="settings-group">
+              <legend>Server Connection</legend>
+              <div class="form-row">
+                <div class="form-group col-8">
+                  <label for="host">Server Host / IP</label>
+                  <input type="text" id="host" required placeholder="dynamic-8.magmanode.com">
+                </div>
+                <div class="form-group col-4">
+                  <label for="port">Port</label>
+                  <input type="number" id="port" required placeholder="25565" min="1" max="65535">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-6">
+                  <label for="username">Bot Username</label>
+                  <input type="text" id="username" required placeholder="MagmaAFK">
+                </div>
+                <div class="form-group col-6">
+                  <label for="auth">Authentication</label>
+                  <select id="auth">
+                    <option value="offline">Offline (Cracked)</option>
+                    <option value="microsoft">Microsoft (Premium)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-6">
+                  <label for="version">Minecraft Version</label>
+                  <select id="version">
+                    <option value="">Auto Detect (Recommended)</option>
+                    <option value="1.20.4">1.20.4</option>
+                    <option value="1.20.2">1.20.2</option>
+                    <option value="1.20.1">1.20.1</option>
+                    <option value="1.19.4">1.19.4</option>
+                    <option value="1.18.2">1.18.2</option>
+                    <option value="1.17.1">1.17.1</option>
+                    <option value="1.16.5">1.16.5</option>
+                  </select>
+                </div>
+                <div class="form-group col-6">
+                  <label for="reconnectDelay">Reconnect Delay (ms)</label>
+                  <input type="number" id="reconnectDelay" required placeholder="10000" min="1000" step="1000">
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- Anti-AFK Settings -->
+            <fieldset class="settings-group">
+              <legend>Anti-AFK Features</legend>
+              <div class="toggle-row">
+                <label for="afk-enabled">Enable Anti-AFK Routine</label>
+                <div class="toggle-switch">
+                  <input type="checkbox" id="afk-enabled">
+                  <span class="slider"></span>
+                </div>
+              </div>
+              <div class="sub-settings" id="afk-sub-settings">
+                <div class="checkbox-grid">
+                  <label class="custom-checkbox">
+                    <input type="checkbox" id="afk-randomWalk">
+                    <span class="checkmark"></span>
+                    Random Walk
+                  </label>
+                  <label class="custom-checkbox">
+                    <input type="checkbox" id="afk-randomLook">
+                    <span class="checkmark"></span>
+                    Look Around
+                  </label>
+                  <label class="custom-checkbox">
+                    <input type="checkbox" id="afk-autoJump">
+                    <span class="checkmark"></span>
+                    Auto Jump
+                  </label>
+                  <label class="custom-checkbox">
+                    <input type="checkbox" id="afk-swingArm">
+                    <span class="checkmark"></span>
+                    Swing Arm
+                  </label>
+                </div>
+
+                <hr class="separator">
+
+                <div class="toggle-row">
+                  <label for="afk-chatSpam">Periodic Chat Spammer</label>
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="afk-chatSpam">
+                    <span class="slider"></span>
+                  </div>
+                </div>
+                <div class="form-group chat-spam-config" id="chat-spam-config">
+                  <label for="afk-chatInterval">Chat Interval (seconds)</label>
+                  <input type="number" id="afk-chatInterval" placeholder="600" min="30">
+                  
+                  <label for="afk-chatMessages">Spam Messages (one per line)</label>
+                  <textarea id="afk-chatMessages" rows="3" placeholder="Server is active!&#10;AFK bot online."></textarea>
+                </div>
+              </div>
+            </fieldset>
+
+            <button type="submit" id="btn-save-config" class="btn btn-save">
+              <i class="fa-solid fa-floppy-disk"></i> Apply & Save Settings
+            </button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Created to bypass MagmaNode idle timeout • Operating System: Windows • Local Time: <span id="footer-time"></span></p>
+    </footer>
+  </div>
+
+  <!-- Socket.IO library -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Client JavaScript -->
+  <script src="client.js"></script>
+</body>
+</html>

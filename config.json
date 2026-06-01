@@ -1,0 +1,22 @@
+{
+  "host": "dynamic-8.magmanode.com",
+  "port": 25752,
+  "username": "MagmaAFK",
+  "auth": "offline",
+  "version": false,
+  "reconnectDelay": 10000,
+  "afk": {
+    "enabled": true,
+    "randomWalk": true,
+    "randomLook": true,
+    "autoJump": true,
+    "swingArm": true,
+    "chatSpam": false,
+    "chatMessages": [
+      "I'm keeping the server alive!",
+      "MagmaNode hosting is online 24/7!",
+      "AFK Bot is active."
+    ],
+    "chatInterval": 600000
+  }
+}
