@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const configPayload = {
       host: inputHost.value.trim(),
-      port: parseInt(inputPort.value) || 25565,
+      port: inputPort.value.trim() ? parseInt(inputPort.value) : null,
       username: inputUsername.value.trim(),
       auth: selectAuth.value,
       version: selectVersion.value || false,
@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
   socket.on('init', (data) => {
     // Fill Config Fields
     inputHost.value = data.config.host || '';
-    inputPort.value = data.config.port || 25565;
+    inputPort.value = (data.config.port !== null && data.config.port !== undefined) ? data.config.port : '';
     inputUsername.value = data.config.username || 'MagmaAFK';
     selectAuth.value = data.config.auth || 'offline';
     selectVersion.value = data.config.version || '';
