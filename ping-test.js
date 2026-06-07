@@ -1,9 +1,9 @@
 const mc = require('minecraft-protocol');
 
-console.log("Pinging server: dynamic-8.magmanode.com:25752...");
+console.log("Pinging server: arena9.funserver.top...");
 mc.ping({
-  host: 'dynamic-8.magmanode.com',
-  port: 25752,
+  host: 'arena9.funserver.top',
+  port: 25565,
   closeTimeout: 5000
 }, (err, response) => {
   if (err) {

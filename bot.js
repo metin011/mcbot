@@ -1,6 +1,13 @@
 const mineflayer = require('mineflayer');
 const EventEmitter = require('events');
 
+let mineflayerViewer;
+try {
+  mineflayerViewer = require('prismarine-viewer').mineflayer;
+} catch (err) {
+  console.warn('prismarine-viewer could not be imported:', err.message);
+}
+
 class MinecraftBot extends EventEmitter {
   constructor(config) {
     super();
@@ -60,6 +67,14 @@ class MinecraftBot extends EventEmitter {
     this.active = false;
     this.clearAFKIntervals();
     if (this.bot) {
+      if (this.bot.viewer) {
+        try {
+          this.bot.viewer.close();
+          this.log('Prismarine 3D Viewer closed.', 'system');
+        } catch (err) {
+          // Failed to close viewer
+        }
+      }
       try {
         this.bot.quit();
       } catch (err) {
@@ -89,12 +104,24 @@ class MinecraftBot extends EventEmitter {
     this.bot.on('spawn', () => {
       this.bot.physicsEnabled = true; // Re-enable physics once spawned in world
       this.log('Bot spawned in the world.', 'success');
+      
+      // Start prismarine-viewer if loaded
+      if (mineflayerViewer) {
+        try {
+          mineflayerViewer(this.bot, { port: 3007, firstPerson: true });
+          this.log('Prismarine 3D Viewer started on port 3007.', 'success');
+        } catch (err) {
+          this.log(`Failed to start 3D Viewer: ${err.message}`, 'error');
+        }
+      }
+
       this.emit('status', {
         online: true,
         connecting: false,
         username: this.bot.username,
         ping: this.bot.player.ping || 0,
-        position: this.bot.entity?.position || { x: 0, y: 0, z: 0 }
+        position: this.bot.entity?.position || { x: 0, y: 0, z: 0 },
+        viewerActive: !!mineflayerViewer
       });
 
       this.startAFK();
@@ -178,6 +205,8 @@ class MinecraftBot extends EventEmitter {
       this.emit('status_update', {
         ping: this.bot.player?.ping || 0,
         position: this.bot.entity.position,
+        yaw: this.bot.entity.yaw,
+        pitch: this.bot.entity.pitch,
         health: this.bot.health || 20,
         food: this.bot.food || 20,
         players: Object.keys(this.bot.players)

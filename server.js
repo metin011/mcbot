@@ -154,6 +154,51 @@ io.on('connection', (socket) => {
     mcBot.triggerManualAction(actionName);
   });
 
+  socket.on('move_bot', (data) => {
+    if (mcBot.bot) {
+      mcBot.bot.setControlState(data.direction, data.state);
+    }
+  });
+
+  socket.on('look_bot', (data) => {
+    if (mcBot.bot) {
+      mcBot.bot.look(data.yaw, data.pitch, false);
+    }
+  });
+
+  socket.on('click_bot', (data) => {
+    if (mcBot.bot) {
+      const block = mcBot.bot.blockAtCursor(4);
+      if (data.button === 2) {
+        // Right Click: interact / bed
+        if (block) {
+          mcBot.bot.activateBlock(block, (err) => {
+            if (err) {
+              mcBot.log(`Failed to interact with ${block.name}: ${err.message}`, 'error');
+            } else {
+              mcBot.log(`Interacted with block: ${block.name} at ${block.position}`, 'success');
+            }
+          });
+        } else {
+          mcBot.log("Right click: No block in range (4 blocks max)", "warning");
+        }
+      } else if (data.button === 0) {
+        // Left Click: attack / dig / swing
+        if (block) {
+          mcBot.bot.dig(block, false, (err) => {
+            if (err) {
+              mcBot.log(`Failed to break block: ${err.message}`, 'error');
+            } else {
+              mcBot.log(`Broke block: ${block.name} at ${block.position}`, 'success');
+            }
+          });
+        } else {
+          mcBot.bot.swingArm('right');
+        }
+      }
+    }
+  });
+
   socket.on('save_config', (newConfig) => {
     const success = saveConfig(newConfig);
     if (success) {

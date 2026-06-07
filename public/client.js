@@ -47,10 +47,35 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const footerTime = document.getElementById('footer-time');
 
+  // Viewport DOM Elements
+  const viewportBody = document.getElementById('viewport-body');
+  const viewportOverlay = document.getElementById('viewport-overlay');
+  const viewportIframe = document.getElementById('viewport-iframe');
+  const viewportPlaceholder = document.getElementById('viewport-placeholder');
+  const focusIndicator = document.getElementById('focus-indicator');
+
   // Application State
   let autoscrollActive = true;
   let isBotOnline = false;
   let isBotConnecting = false;
+
+  // Viewport Control State
+  let botYaw = 0;
+  let botPitch = 0;
+  let isDragging = false;
+  let lastMouseX = 0;
+  let lastMouseY = 0;
+  let dragStartMouseX = 0;
+  let dragStartMouseY = 0;
+  
+  const activeKeys = {
+    forward: false,
+    back: false,
+    left: false,
+    right: false,
+    jump: false,
+    sneak: false
+  };
 
   // Update Footer Time
   function updateTime() {
@@ -295,6 +320,13 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSendChat.disabled = false;
       
       manualButtons.forEach(btn => btn.disabled = false);
+
+      // Viewport adjustments
+      viewportPlaceholder.style.display = 'none';
+      if (!viewportIframe.src) {
+        const iframeHost = window.location.hostname;
+        viewportIframe.src = `http://${iframeHost}:3007`;
+      }
     } else if (isBotConnecting) {
       connectionBadge.classList.add('badge-connecting');
       badgeText.textContent = 'Connecting';
@@ -307,6 +339,11 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSendChat.disabled = true;
       
       manualButtons.forEach(btn => btn.disabled = true);
+
+      // Viewport adjustments
+      viewportPlaceholder.style.display = 'flex';
+      viewportIframe.src = '';
+      focusIndicator.innerHTML = '<i class="fa-solid fa-lock-open"></i> Controls Unlocked. Click to play.';
     } else {
       connectionBadge.classList.add('badge-offline');
       badgeText.textContent = 'Offline';
@@ -319,6 +356,19 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSendChat.disabled = true;
       
       manualButtons.forEach(btn => btn.disabled = true);
+
+      // Viewport adjustments
+      viewportPlaceholder.style.display = 'flex';
+      viewportIframe.src = '';
+      focusIndicator.innerHTML = '<i class="fa-solid fa-lock-open"></i> Controls Unlocked. Click to play.';
+
+      // Release all keys
+      Object.keys(activeKeys).forEach(k => {
+        if (activeKeys[k]) {
+          activeKeys[k] = false;
+          socket.emit('move_bot', { direction: k, state: false });
+        }
+      });
       
       // Reset displays
       valPing.textContent = '-- ms';
@@ -331,6 +381,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Helper: Update live numbers (HP, position, players)
   function updateStatusDetails(details) {
     if (!isBotOnline) return;
+
+    if (details.yaw !== undefined && !isDragging) {
+      botYaw = details.yaw;
+    }
+    if (details.pitch !== undefined && !isDragging) {
+      botPitch = details.pitch;
+    }
 
     if (details.ping !== undefined) {
       valPing.textContent = `${details.ping} ms`;
@@ -353,4 +410,116 @@ document.addEventListener('DOMContentLoaded', () => {
       valPlayers.title = details.players.join(', ');
     }
   }
+
+  // ==========================================================================
+  // VIEWPORT INTERACTIVE CONTROLS (WASD + MOUSE LOOK + MOUSE CLICK)
+  // ==========================================================================
+  
+  // 1. Keyboard focus indicators
+  viewportOverlay.addEventListener('focus', () => {
+    focusIndicator.innerHTML = '<i class="fa-solid fa-lock"></i> Controls Locked. Press ESC to unlock.';
+  });
+  
+  viewportOverlay.addEventListener('blur', () => {
+    focusIndicator.innerHTML = '<i class="fa-solid fa-lock-open"></i> Controls Unlocked. Click to play.';
+    // Release all keys when focus is lost
+    Object.keys(activeKeys).forEach(k => {
+      if (activeKeys[k]) {
+        activeKeys[k] = false;
+        socket.emit('move_bot', { direction: k, state: false });
+      }
+    });
+  });
+
+  // Prevent right-click context menu inside the viewport
+  viewportOverlay.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  });
+
+  // 2. Keyboard listeners (WASD, Space, Shift)
+  const keyMap = {
+    'KeyW': 'forward',
+    'KeyS': 'back',
+    'KeyA': 'left',
+    'KeyD': 'right',
+    'Space': 'jump',
+    'ShiftLeft': 'sneak',
+    'ShiftRight': 'sneak'
+  };
+
+  viewportOverlay.addEventListener('keydown', (e) => {
+    if (!isBotOnline) return;
+    
+    const direction = keyMap[e.code];
+    if (direction) {
+      e.preventDefault(); // Stop page scrolling
+      if (!activeKeys[direction]) {
+        activeKeys[direction] = true;
+        socket.emit('move_bot', { direction, state: true });
+      }
+    }
+  });
+
+  viewportOverlay.addEventListener('keyup', (e) => {
+    if (!isBotOnline) return;
+
+    const direction = keyMap[e.code];
+    if (direction) {
+      e.preventDefault();
+      if (activeKeys[direction]) {
+        activeKeys[direction] = false;
+        socket.emit('move_bot', { direction, state: false });
+      }
+    }
+    
+    // Unlock control on Escape key press
+    if (e.key === 'Escape') {
+      viewportOverlay.blur();
+    }
+  });
+
+  // 3. Mouse Look Drag controls
+  const sensitivity = 0.005;
+
+  viewportOverlay.addEventListener('mousedown', (e) => {
+    if (!isBotOnline) return;
+    
+    isDragging = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    
+    dragStartMouseX = e.clientX;
+    dragStartMouseY = e.clientY;
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging || !isBotOnline) return;
+
+    const deltaX = e.clientX - lastMouseX;
+    const deltaY = e.clientY - lastMouseY;
+    
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+
+    botYaw -= deltaX * sensitivity;
+    botPitch -= deltaY * sensitivity;
+
+    // Clamp vertical look (pitch)
+    const maxPitch = Math.PI / 2 - 0.05;
+    botPitch = Math.max(-maxPitch, Math.min(maxPitch, botPitch));
+
+    socket.emit('look_bot', { yaw: botYaw, pitch: botPitch });
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+
+    // Check if it was a quick click rather than a camera drag
+    const totalDist = Math.hypot(e.clientX - dragStartMouseX, e.clientY - dragStartMouseY);
+    if (totalDist < 6) {
+      // It was a click! e.button: 0 = Left Click, 2 = Right Click
+      socket.emit('click_bot', { button: e.button });
+    }
+  });
 });

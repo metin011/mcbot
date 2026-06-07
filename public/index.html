@@ -85,6 +85,33 @@
           </div>
         </div>
 
+        <!-- Live 3D Viewport -->
+        <div class="viewport-card glass-card">
+          <div class="viewport-header">
+            <div class="viewport-title">
+              <i class="fa-solid fa-gamepad viewport-icon"></i>
+              <h2>Live 3D Viewport</h2>
+            </div>
+            <div class="viewport-tips">
+              <span class="tip-badge"><i class="fa-solid fa-keyboard"></i> Click to Focus (WASD + Space + Shift)</span>
+              <span class="tip-badge"><i class="fa-solid fa-mouse"></i> Drag to Look • Click to Interact</span>
+            </div>
+          </div>
+          <div class="viewport-body" id="viewport-body">
+            <!-- Transparent overlay to intercept controls and keep focus on main window -->
+            <div class="viewport-overlay" id="viewport-overlay" tabindex="0">
+              <div class="focus-indicator" id="focus-indicator">
+                <i class="fa-solid fa-lock-open"></i> Controls Unlocked. Click to play.
+              </div>
+            </div>
+            <iframe id="viewport-iframe" src="" frameborder="0" scrolling="no"></iframe>
+            <div class="viewport-placeholder" id="viewport-placeholder">
+              <i class="fa-solid fa-eye-slash placeholder-icon"></i>
+              <p>Viewport Offline. Start the bot to connect the 3D renderer.</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Terminal Console -->
         <div class="console-container glass-card">
           <div class="console-header">
