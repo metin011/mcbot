@@ -112,8 +112,23 @@ class MinecraftBot extends EventEmitter {
     });
 
     this.bot.on('kicked', (reason) => {
-      const parsedReason = JSON.parse(reason);
-      const message = parsedReason.text || parsedReason.extra?.map(e => e.text).join('') || reason;
+      let message = '';
+      try {
+        if (typeof reason === 'string') {
+          try {
+            const parsed = JSON.parse(reason);
+            message = parsed.text || parsed.extra?.map(e => e.text).join('') || reason;
+          } catch (e) {
+            message = reason;
+          }
+        } else if (typeof reason === 'object' && reason !== null) {
+          message = reason.text || reason.value?.text?.value || JSON.stringify(reason);
+        } else {
+          message = String(reason);
+        }
+      } catch (err) {
+        message = 'Unknown kick reason';
+      }
       this.log(`Kicked from server. Reason: ${message}`, 'warning');
     });
 
