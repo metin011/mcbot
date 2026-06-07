@@ -5,6 +5,7 @@
   "auth": "offline",
   "version": "1.21.4",
   "reconnectDelay": 10000,
+  "viewerEnabled": false,
   "afk": {
     "enabled": true,
     "randomWalk": true,

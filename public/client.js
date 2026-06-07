@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const focusIndicator = document.getElementById('focus-indicator');
   const modeAutoBtn = document.getElementById('mode-auto');
   const modeManualBtn = document.getElementById('mode-manual');
+  const btnToggleViewer = document.getElementById('btn-toggle-viewer');
   const hotbarStrip = document.getElementById('hotbar-strip');
   const hotbarSlots = document.querySelectorAll('.hotbar-slot');
 
@@ -65,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let controlMode = 'auto';
   let activeHotbarSlot = 0;
   let pointerLocked = false;
+  let viewerOn = false; // viewer is OFF by default to reduce server load
 
   // Viewport Control State
   let botYaw = 0;
@@ -231,6 +233,29 @@ document.addEventListener('DOMContentLoaded', () => {
     requestPointerLock();
   });
 
+  // Viewer toggle button
+  btnToggleViewer.addEventListener('click', () => {
+    if (!isBotOnline) return;
+    const newState = !viewerOn;
+    socket.emit('toggle_viewer', newState);
+    // Optimistic UI update
+    setViewerState(newState);
+  });
+
+  function setViewerState(enabled) {
+    viewerOn = enabled;
+    if (enabled) {
+      btnToggleViewer.classList.add('active');
+      btnToggleViewer.innerHTML = '<i class="fa-solid fa-eye"></i> Canlı Görüntü';
+      loadViewerFrame(true);
+    } else {
+      btnToggleViewer.classList.remove('active');
+      btnToggleViewer.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Canlı Görüntü';
+      viewportIframe.src = '';
+      viewportPlaceholder.style.display = viewerOn ? 'none' : 'flex';
+    }
+  }
+
   function updateHotbarUI(slot) {
     activeHotbarSlot = slot;
     hotbarSlots.forEach((btn) => {
@@ -379,6 +404,10 @@ document.addEventListener('DOMContentLoaded', () => {
     updateHotbarUI(slotData.slot);
   });
 
+  socket.on('viewer_state', (data) => {
+    setViewerState(data.enabled);
+  });
+
   socket.on('config_saved', (result) => {
     if (result.success) {
       appendLogMessage({
@@ -419,10 +448,13 @@ document.addEventListener('DOMContentLoaded', () => {
       manualButtons.forEach(btn => btn.disabled = false);
       modeAutoBtn.disabled = false;
       modeManualBtn.disabled = false;
+      btnToggleViewer.disabled = false;
 
-      // Viewport adjustments
-      viewportPlaceholder.style.display = 'none';
-      loadViewerFrame(status.viewerActive !== false);
+      // Viewport: don't auto-load viewer; user must toggle it manually
+      viewportPlaceholder.style.display = viewerOn ? 'none' : 'flex';
+      if (!viewerOn) {
+        viewportIframe.src = '';
+      }
       setControlMode(controlMode, false);
     } else if (isBotConnecting) {
       connectionBadge.classList.add('badge-connecting');
@@ -438,6 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
       manualButtons.forEach(btn => btn.disabled = true);
       modeAutoBtn.disabled = true;
       modeManualBtn.disabled = true;
+      btnToggleViewer.disabled = true;
 
       // Viewport adjustments
       viewportPlaceholder.style.display = 'flex';
@@ -458,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
       manualButtons.forEach(btn => btn.disabled = true);
       modeAutoBtn.disabled = true;
       modeManualBtn.disabled = true;
+      btnToggleViewer.disabled = true;
 
       // Viewport adjustments
       viewportPlaceholder.style.display = 'flex';

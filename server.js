@@ -21,6 +21,7 @@ let config = {
   auth: 'offline',
   version: false,
   reconnectDelay: 10000,
+  viewerEnabled: false,
   afk: {
     enabled: true,
     randomWalk: true,
@@ -173,6 +174,26 @@ io.on('connection', (socket) => {
 
   socket.on('select_hotbar', (slot) => {
     mcBot.selectHotbarSlot(slot);
+  });
+
+  socket.on('toggle_viewer', (enabled) => {
+    config.viewerEnabled = !!enabled;
+    mcBot.config.viewerEnabled = !!enabled;
+    saveConfig(config);
+    if (enabled && mcBot.bot && mcBot.bot.entity && viewerAvailable) {
+      try {
+        viewerManager.attachBot(mcBot.bot, { viewDistance: 2, firstPerson: true });
+        mcBot.log('3D viewer manual olaraq aktivləşdirildi.', 'success');
+        io.emit('viewer_state', { enabled: true });
+      } catch (err) {
+        mcBot.log(`Viewer başladıla bilmədi: ${err.message}`, 'error');
+        io.emit('viewer_state', { enabled: false });
+      }
+    } else if (!enabled) {
+      viewerManager.detachBot();
+      mcBot.log('3D viewer deaktivləşdirildi — server yükü azaldı.', 'system');
+      io.emit('viewer_state', { enabled: false });
+    }
   });
 
   socket.on('move_bot', (data) => {

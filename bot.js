@@ -112,7 +112,8 @@ class MinecraftBot extends EventEmitter {
       this.log('Bot spawned in the world.', 'success');
       
       let viewerActive = false;
-      if (this.viewerManager && viewerAvailable) {
+      // Viewer only starts if explicitly enabled by user (to avoid chunk spam overloading server)
+      if (this.config.viewerEnabled && this.viewerManager && viewerAvailable) {
         try {
           // viewDistance: 2 — minimum chunk requests to avoid server overload
           this.viewerManager.attachBot(this.bot, { viewDistance: 2, firstPerson: true });
@@ -121,6 +122,8 @@ class MinecraftBot extends EventEmitter {
         } catch (err) {
           this.log(`3D viewer başladıla bilmədi: ${err.message}`, 'error');
         }
+      } else if (!this.config.viewerEnabled) {
+        this.log('3D viewer deaktivdir — paneldən "Canlı Görüntü" düyməsi ilə aç.', 'system');
       } else if (!viewerAvailable) {
         this.log('3D viewer yüklənməyib. Terminalda: npm install canvas', 'warning');
       }
@@ -277,14 +280,15 @@ class MinecraftBot extends EventEmitter {
       }
 
       // Schedule next action with randomized delay
-      const nextDelay = Math.random() * 8000 + 7000; // 7 to 15 seconds
+      // 30-60 seconds: much lower packet rate to avoid server overload
+      const nextDelay = Math.random() * 30000 + 30000;
       if (this.bot && this.active) {
         this.afkInterval = setTimeout(runAfkLoop, nextDelay);
       }
     };
 
-    // Start loop
-    this.afkInterval = setTimeout(runAfkLoop, 5000);
+    // Start loop after 30s (not 5s) to let the bot settle in first
+    this.afkInterval = setTimeout(runAfkLoop, 30000);
   }
 
   startChatSpam() {
@@ -336,7 +340,7 @@ class MinecraftBot extends EventEmitter {
     if (!this.bot) return;
     // Walk forward or backward randomly to stay close to the starting point
     const direction = Math.random() > 0.5 ? 'forward' : 'back';
-    const duration = Math.random() * 500 + 300; // 300ms to 800ms to avoid falling off cliffs
+    const duration = Math.random() * 200 + 100; // 100ms to 300ms — short walk, low packet load
 
     this.bot.setControlState(direction, true);
     this.log(`Bot started walking ${direction}.`, 'afk');
