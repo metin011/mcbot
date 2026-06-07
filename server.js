@@ -68,7 +68,7 @@ const mcBot = new MinecraftBot(config);
 // Circular logs buffer (store last 150 log entries to show new clients)
 const logsBuffer = [];
 const MAX_LOGS = 150;
-let lastStatus = { online: false, connecting: false };
+let lastStatus = { online: false, connecting: false, controlMode: 'auto' };
 let lastStatusUpdate = {
   ping: 0,
   position: { x: 0, y: 0, z: 0 },
@@ -103,6 +103,15 @@ mcBot.on('status_update', (updateData) => {
 
 mcBot.on('chat', (chatData) => {
   io.emit('chat_received', chatData);
+});
+
+mcBot.on('control_mode', (modeData) => {
+  lastStatus.controlMode = modeData.mode;
+  io.emit('control_mode', modeData);
+});
+
+mcBot.on('hotbar_slot', (slotData) => {
+  io.emit('hotbar_slot', slotData);
 });
 
 // Express routes
@@ -152,6 +161,14 @@ io.on('connection', (socket) => {
 
   socket.on('manual_action', (actionName) => {
     mcBot.triggerManualAction(actionName);
+  });
+
+  socket.on('set_control_mode', (mode) => {
+    mcBot.setControlMode(mode);
+  });
+
+  socket.on('select_hotbar', (slot) => {
+    mcBot.selectHotbarSlot(slot);
   });
 
   socket.on('move_bot', (data) => {

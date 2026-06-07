@@ -53,11 +53,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewportIframe = document.getElementById('viewport-iframe');
   const viewportPlaceholder = document.getElementById('viewport-placeholder');
   const focusIndicator = document.getElementById('focus-indicator');
+  const modeAutoBtn = document.getElementById('mode-auto');
+  const modeManualBtn = document.getElementById('mode-manual');
+  const hotbarStrip = document.getElementById('hotbar-strip');
+  const hotbarSlots = document.querySelectorAll('.hotbar-slot');
 
   // Application State
   let autoscrollActive = true;
   let isBotOnline = false;
   let isBotConnecting = false;
+  let controlMode = 'auto';
+  let activeHotbarSlot = 0;
+  let pointerLocked = false;
 
   // Viewport Control State
   let botYaw = 0;
@@ -74,7 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
     left: false,
     right: false,
     jump: false,
-    sneak: false
+    sneak: false,
+    sprint: false
   };
 
   // Update Footer Time
@@ -189,6 +197,74 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  function setControlMode(mode, notifyServer = true) {
+    if (mode !== 'auto' && mode !== 'manual') return;
+    controlMode = mode;
+    modeAutoBtn.classList.toggle('active', mode === 'auto');
+    modeManualBtn.classList.toggle('active', mode === 'manual');
+    viewportOverlay.classList.toggle('manual-mode', mode === 'manual');
+    viewportOverlay.classList.toggle('auto-mode', mode === 'auto');
+    hotbarStrip.classList.toggle('visible', mode === 'manual' && isBotOnline);
+
+    if (mode === 'auto') {
+      releaseAllKeys();
+      exitPointerLock();
+      focusIndicator.innerHTML = '<i class="fa-solid fa-robot"></i> Avtomatik AFK — bot özü hərəkət edir';
+    } else if (isBotOnline) {
+      focusIndicator.innerHTML = '<i class="fa-solid fa-lock-open"></i> Manual rejim — kliklə və oyna (ESC ilə çıx)';
+    }
+
+    if (notifyServer) {
+      socket.emit('set_control_mode', mode);
+    }
+  }
+
+  modeAutoBtn.addEventListener('click', () => {
+    if (!isBotOnline) return;
+    setControlMode('auto');
+  });
+
+  modeManualBtn.addEventListener('click', () => {
+    if (!isBotOnline) return;
+    setControlMode('manual');
+    viewportOverlay.focus();
+    requestPointerLock();
+  });
+
+  function updateHotbarUI(slot) {
+    activeHotbarSlot = slot;
+    hotbarSlots.forEach((btn) => {
+      btn.classList.toggle('active', parseInt(btn.dataset.slot, 10) === slot);
+    });
+  }
+
+  hotbarSlots.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!isBotOnline || controlMode !== 'manual') return;
+      socket.emit('select_hotbar', parseInt(btn.dataset.slot, 10));
+    });
+  });
+
+  function releaseAllKeys() {
+    Object.keys(activeKeys).forEach((k) => {
+      if (activeKeys[k]) {
+        activeKeys[k] = false;
+        socket.emit('move_bot', { direction: k, state: false });
+      }
+    });
+  }
+
+  function requestPointerLock() {
+    if (controlMode !== 'manual' || !isBotOnline) return;
+    viewportOverlay.requestPointerLock?.();
+  }
+
+  function exitPointerLock() {
+    if (document.pointerLockElement) {
+      document.exitPointerLock?.();
+    }
+  }
+
   // ==========================================================================
   // CONFIGURATION SUBMISSION
   // ==========================================================================
@@ -265,6 +341,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load initial states
     updateConnectionStatus(data.status);
     updateStatusDetails(data.statusUpdate);
+    if (data.status?.controlMode) {
+      setControlMode(data.status.controlMode, false);
+    }
   });
 
   // Logs stream
@@ -280,6 +359,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Vitals and coordinates updates
   socket.on('status_update', (updateData) => {
     updateStatusDetails(updateData);
+  });
+
+  socket.on('control_mode', (modeData) => {
+    setControlMode(modeData.mode, false);
+  });
+
+  socket.on('hotbar_slot', (slotData) => {
+    updateHotbarUI(slotData.slot);
   });
 
   socket.on('config_saved', (result) => {
@@ -320,6 +407,8 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSendChat.disabled = false;
       
       manualButtons.forEach(btn => btn.disabled = false);
+      modeAutoBtn.disabled = false;
+      modeManualBtn.disabled = false;
 
       // Viewport adjustments
       viewportPlaceholder.style.display = 'none';
@@ -327,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const iframeHost = window.location.hostname;
         viewportIframe.src = `http://${iframeHost}:3007`;
       }
+      setControlMode(controlMode, false);
     } else if (isBotConnecting) {
       connectionBadge.classList.add('badge-connecting');
       badgeText.textContent = 'Connecting';
@@ -339,11 +429,14 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSendChat.disabled = true;
       
       manualButtons.forEach(btn => btn.disabled = true);
+      modeAutoBtn.disabled = true;
+      modeManualBtn.disabled = true;
 
       // Viewport adjustments
       viewportPlaceholder.style.display = 'flex';
       viewportIframe.src = '';
-      focusIndicator.innerHTML = '<i class="fa-solid fa-lock-open"></i> Controls Unlocked. Click to play.';
+      hotbarStrip.classList.remove('visible');
+      focusIndicator.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Bağlanır...';
     } else {
       connectionBadge.classList.add('badge-offline');
       badgeText.textContent = 'Offline';
@@ -356,19 +449,17 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSendChat.disabled = true;
       
       manualButtons.forEach(btn => btn.disabled = true);
+      modeAutoBtn.disabled = true;
+      modeManualBtn.disabled = true;
 
       // Viewport adjustments
       viewportPlaceholder.style.display = 'flex';
       viewportIframe.src = '';
-      focusIndicator.innerHTML = '<i class="fa-solid fa-lock-open"></i> Controls Unlocked. Click to play.';
+      hotbarStrip.classList.remove('visible');
+      focusIndicator.innerHTML = '<i class="fa-solid fa-lock-open"></i> Bot offline — Start ilə başlat';
 
-      // Release all keys
-      Object.keys(activeKeys).forEach(k => {
-        if (activeKeys[k]) {
-          activeKeys[k] = false;
-          socket.emit('move_bot', { direction: k, state: false });
-        }
-      });
+      releaseAllKeys();
+      exitPointerLock();
       
       // Reset displays
       valPing.textContent = '-- ms';
@@ -414,54 +505,82 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================================================
   // VIEWPORT INTERACTIVE CONTROLS (WASD + MOUSE LOOK + MOUSE CLICK)
   // ==========================================================================
-  
-  // 1. Keyboard focus indicators
+
+  function canControlBot() {
+    return isBotOnline && controlMode === 'manual';
+  }
+
+  viewportOverlay.addEventListener('click', () => {
+    if (!canControlBot()) return;
+    viewportOverlay.focus();
+    requestPointerLock();
+  });
+
   viewportOverlay.addEventListener('focus', () => {
-    focusIndicator.innerHTML = '<i class="fa-solid fa-lock"></i> Controls Locked. Press ESC to unlock.';
+    if (!canControlBot()) return;
+    focusIndicator.classList.add('hidden');
   });
-  
+
   viewportOverlay.addEventListener('blur', () => {
-    focusIndicator.innerHTML = '<i class="fa-solid fa-lock-open"></i> Controls Unlocked. Click to play.';
-    // Release all keys when focus is lost
-    Object.keys(activeKeys).forEach(k => {
-      if (activeKeys[k]) {
-        activeKeys[k] = false;
-        socket.emit('move_bot', { direction: k, state: false });
-      }
-    });
+    releaseAllKeys();
+    if (controlMode === 'manual' && isBotOnline) {
+      focusIndicator.classList.remove('hidden');
+      focusIndicator.innerHTML = '<i class="fa-solid fa-lock-open"></i> Manual rejim — kliklə və oyna (ESC ilə çıx)';
+    }
   });
 
-  // Prevent right-click context menu inside the viewport
+  document.addEventListener('pointerlockchange', () => {
+    pointerLocked = document.pointerLockElement === viewportOverlay;
+    if (pointerLocked) {
+      focusIndicator.classList.add('hidden');
+    } else if (controlMode === 'manual' && isBotOnline) {
+      focusIndicator.classList.remove('hidden');
+      releaseAllKeys();
+    }
+  });
+
   viewportOverlay.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
+    if (canControlBot()) e.preventDefault();
   });
 
-  // 2. Keyboard listeners (WASD, Space, Shift)
   const keyMap = {
-    'KeyW': 'forward',
-    'KeyS': 'back',
-    'KeyA': 'left',
-    'KeyD': 'right',
-    'Space': 'jump',
-    'ShiftLeft': 'sneak',
-    'ShiftRight': 'sneak'
+    KeyW: 'forward',
+    KeyS: 'back',
+    KeyA: 'left',
+    KeyD: 'right',
+    Space: 'jump',
+    ShiftLeft: 'sneak',
+    ShiftRight: 'sneak',
+    ControlLeft: 'sprint',
+    ControlRight: 'sprint'
   };
 
-  viewportOverlay.addEventListener('keydown', (e) => {
-    if (!isBotOnline) return;
-    
+  const hotbarKeyMap = {
+    Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4,
+    Digit6: 5, Digit7: 6, Digit8: 7, Digit9: 8
+  };
+
+  function handleKeyDown(e) {
+    if (!canControlBot()) return;
+
     const direction = keyMap[e.code];
     if (direction) {
-      e.preventDefault(); // Stop page scrolling
+      e.preventDefault();
       if (!activeKeys[direction]) {
         activeKeys[direction] = true;
         socket.emit('move_bot', { direction, state: true });
       }
+      return;
     }
-  });
 
-  viewportOverlay.addEventListener('keyup', (e) => {
-    if (!isBotOnline) return;
+    if (hotbarKeyMap[e.code] !== undefined) {
+      e.preventDefault();
+      socket.emit('select_hotbar', hotbarKeyMap[e.code]);
+    }
+  }
+
+  function handleKeyUp(e) {
+    if (!canControlBot()) return;
 
     const direction = keyMap[e.code];
     if (direction) {
@@ -471,54 +590,67 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('move_bot', { direction, state: false });
       }
     }
-    
-    // Unlock control on Escape key press
+
     if (e.key === 'Escape') {
+      exitPointerLock();
       viewportOverlay.blur();
+    }
+  }
+
+  viewportOverlay.addEventListener('keydown', handleKeyDown);
+  viewportOverlay.addEventListener('keyup', handleKeyUp);
+  document.addEventListener('keydown', (e) => {
+    if (document.pointerLockElement === viewportOverlay) {
+      handleKeyDown(e);
+    }
+  });
+  document.addEventListener('keyup', (e) => {
+    if (document.pointerLockElement === viewportOverlay) {
+      handleKeyUp(e);
     }
   });
 
-  // 3. Mouse Look Drag controls
-  const sensitivity = 0.005;
+  const sensitivity = 0.003;
 
   viewportOverlay.addEventListener('mousedown', (e) => {
-    if (!isBotOnline) return;
-    
+    if (!canControlBot()) return;
     isDragging = true;
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
-    
     dragStartMouseX = e.clientX;
     dragStartMouseY = e.clientY;
+    if (e.button === 0) requestPointerLock();
   });
 
-  window.addEventListener('mousemove', (e) => {
-    if (!isDragging || !isBotOnline) return;
+  document.addEventListener('mousemove', (e) => {
+    if (!canControlBot()) return;
 
-    const deltaX = e.clientX - lastMouseX;
-    const deltaY = e.clientY - lastMouseY;
-    
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
+    const deltaX = pointerLocked ? e.movementX : (isDragging ? e.clientX - lastMouseX : 0);
+    const deltaY = pointerLocked ? e.movementY : (isDragging ? e.clientY - lastMouseY : 0);
+
+    if (!pointerLocked && !isDragging) return;
+    if (!pointerLocked) {
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    }
+
+    if (deltaX === 0 && deltaY === 0) return;
 
     botYaw -= deltaX * sensitivity;
     botPitch -= deltaY * sensitivity;
 
-    // Clamp vertical look (pitch)
     const maxPitch = Math.PI / 2 - 0.05;
     botPitch = Math.max(-maxPitch, Math.min(maxPitch, botPitch));
-
     socket.emit('look_bot', { yaw: botYaw, pitch: botPitch });
   });
 
-  window.addEventListener('mouseup', (e) => {
+  document.addEventListener('mouseup', (e) => {
     if (!isDragging) return;
     isDragging = false;
 
-    // Check if it was a quick click rather than a camera drag
+    if (!canControlBot()) return;
     const totalDist = Math.hypot(e.clientX - dragStartMouseX, e.clientY - dragStartMouseY);
     if (totalDist < 6) {
-      // It was a click! e.button: 0 = Left Click, 2 = Right Click
       socket.emit('click_bot', { button: e.button });
     }
   });

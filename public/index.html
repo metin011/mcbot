@@ -90,24 +90,43 @@
           <div class="viewport-header">
             <div class="viewport-title">
               <i class="fa-solid fa-gamepad viewport-icon"></i>
-              <h2>Live 3D Viewport</h2>
+              <h2>Canlı Görüntü</h2>
+            </div>
+            <div class="control-mode-switch" id="control-mode-switch">
+              <button type="button" class="mode-btn active" data-mode="auto" id="mode-auto" disabled>
+                <i class="fa-solid fa-robot"></i> Avtomatik AFK
+              </button>
+              <button type="button" class="mode-btn" data-mode="manual" id="mode-manual" disabled>
+                <i class="fa-solid fa-gamepad"></i> Manual Oyun
+              </button>
             </div>
             <div class="viewport-tips">
-              <span class="tip-badge"><i class="fa-solid fa-keyboard"></i> Click to Focus (WASD + Space + Shift)</span>
-              <span class="tip-badge"><i class="fa-solid fa-mouse"></i> Drag to Look • Click to Interact</span>
+              <span class="tip-badge"><i class="fa-solid fa-keyboard"></i> WASD • Space • Shift • Ctrl</span>
+              <span class="tip-badge"><i class="fa-solid fa-mouse"></i> Siçan ilə bax • Sol/Sağ klik</span>
+              <span class="tip-badge"><i class="fa-solid fa-hashtag"></i> 1-9 hotbar</span>
             </div>
           </div>
           <div class="viewport-body" id="viewport-body">
-            <!-- Transparent overlay to intercept controls and keep focus on main window -->
             <div class="viewport-overlay" id="viewport-overlay" tabindex="0">
               <div class="focus-indicator" id="focus-indicator">
-                <i class="fa-solid fa-lock-open"></i> Controls Unlocked. Click to play.
+                <i class="fa-solid fa-lock-open"></i> Manual rejimdə kliklə — botu oyna
               </div>
             </div>
-            <iframe id="viewport-iframe" src="" frameborder="0" scrolling="no"></iframe>
+            <iframe id="viewport-iframe" src="" frameborder="0" scrolling="no" allow="fullscreen"></iframe>
             <div class="viewport-placeholder" id="viewport-placeholder">
               <i class="fa-solid fa-eye-slash placeholder-icon"></i>
-              <p>Viewport Offline. Start the bot to connect the 3D renderer.</p>
+              <p>Bot offline. Start düyməsinə bas — botun gördüyünü burada görəcəksən.</p>
+            </div>
+            <div class="hotbar-strip" id="hotbar-strip">
+              <button type="button" class="hotbar-slot" data-slot="0">1</button>
+              <button type="button" class="hotbar-slot" data-slot="1">2</button>
+              <button type="button" class="hotbar-slot" data-slot="2">3</button>
+              <button type="button" class="hotbar-slot" data-slot="3">4</button>
+              <button type="button" class="hotbar-slot" data-slot="4">5</button>
+              <button type="button" class="hotbar-slot" data-slot="5">6</button>
+              <button type="button" class="hotbar-slot" data-slot="6">7</button>
+              <button type="button" class="hotbar-slot" data-slot="7">8</button>
+              <button type="button" class="hotbar-slot" data-slot="8">9</button>
             </div>
           </div>
         </div>
@@ -149,8 +168,9 @@
         <div class="actions-card glass-card">
           <div class="card-header">
             <i class="fa-solid fa-gamepad card-icon"></i>
-            <h2>Manual AFK Actions</h2>
+            <h2>Manual Əməliyyatlar</h2>
           </div>
+          <p class="card-hint">Manual Oyun rejimində viewport-da tam idarəetmə aktivdir. Buradakı düymələr hər iki rejimdə işləyir.</p>
           <div class="actions-grid">
             <button class="action-btn" data-action="jump" id="manual-jump" disabled>
               <i class="fa-solid fa-person-running"></i>

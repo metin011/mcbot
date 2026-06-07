@@ -18,6 +18,7 @@ class MinecraftBot extends EventEmitter {
     this.afkInterval = null;
     this.chatSpamInterval = null;
     this.isReconnecting = false;
+    this.controlMode = 'auto'; // 'auto' or 'manual'
   }
 
   log(message, type = 'info') {
@@ -216,7 +217,7 @@ class MinecraftBot extends EventEmitter {
 
   clearAFKIntervals() {
     if (this.afkInterval) {
-      clearInterval(this.afkInterval);
+      clearTimeout(this.afkInterval);
       this.afkInterval = null;
     }
     if (this.chatSpamInterval) {
@@ -230,8 +231,11 @@ class MinecraftBot extends EventEmitter {
   }
 
   startAFK() {
-    if (this.afkInterval) clearInterval(this.afkInterval);
-    if (!this.config.afk?.enabled) return;
+    if (this.afkInterval) {
+      clearTimeout(this.afkInterval);
+      this.afkInterval = null;
+    }
+    if (!this.config.afk?.enabled || this.controlMode === 'manual') return;
 
     this.log('Anti-AFK module activated.', 'system');
 
@@ -374,6 +378,46 @@ class MinecraftBot extends EventEmitter {
       return true;
     } catch (err) {
       this.log(`Failed to send chat: ${err.message}`, 'error');
+      return false;
+    }
+  }
+
+  setControlMode(mode) {
+    if (mode !== 'auto' && mode !== 'manual') return;
+    this.controlMode = mode;
+    this.log(`Control mode switched to ${mode === 'manual' ? 'MANUAL PLAY' : 'AUTO-AFK'}.`, 'system');
+    this.emit('control_mode', { mode });
+
+    if (mode === 'manual') {
+      if (this.afkInterval) {
+        clearTimeout(this.afkInterval);
+        this.afkInterval = null;
+      }
+      if (this.chatSpamInterval) {
+        clearInterval(this.chatSpamInterval);
+        this.chatSpamInterval = null;
+      }
+      if (this.bot) {
+        ['forward', 'back', 'left', 'right', 'jump', 'sneak', 'sprint'].forEach((dir) => {
+          this.bot.setControlState(dir, false);
+        });
+      }
+    } else if (this.bot && this.bot.entity) {
+      this.startAFK();
+      this.startChatSpam();
+    }
+  }
+
+  selectHotbarSlot(slot) {
+    if (!this.bot) return false;
+    const index = Math.max(0, Math.min(8, parseInt(slot, 10) || 0));
+    try {
+      this.bot.setQuickBarSlot(index);
+      this.log(`Hotbar slot selected: ${index + 1}`, 'system');
+      this.emit('hotbar_slot', { slot: index });
+      return true;
+    } catch (err) {
+      this.log(`Failed to select hotbar slot: ${err.message}`, 'error');
       return false;
     }
   }
