@@ -22,6 +22,7 @@ class MinecraftBot extends EventEmitter {
     this.chatSpamInterval = null;
     this.isReconnecting = false;
     this.controlMode = 'auto'; // 'auto' or 'manual'
+    this.reconnectAttempts = 0; // For exponential backoff
   }
 
   log(message, type = 'info') {
@@ -102,6 +103,7 @@ class MinecraftBot extends EventEmitter {
     });
 
     this.bot.on('login', () => {
+      this.reconnectAttempts = 0; // Reset backoff on successful login
       this.log(`Successfully logged into server as '${this.bot.username}'!`, 'success');
     });
 
@@ -112,7 +114,8 @@ class MinecraftBot extends EventEmitter {
       let viewerActive = false;
       if (this.viewerManager && viewerAvailable) {
         try {
-          this.viewerManager.attachBot(this.bot, { viewDistance: 8, firstPerson: true });
+          // viewDistance: 2 — minimum chunk requests to avoid server overload
+          this.viewerManager.attachBot(this.bot, { viewDistance: 2, firstPerson: true });
           viewerActive = true;
           this.log('3D viewer aktivdir — Canlı Görüntü panelində göstərilir.', 'success');
         } catch (err) {
@@ -173,6 +176,9 @@ class MinecraftBot extends EventEmitter {
       
       if (this.active) {
         this.handleReconnect();
+      } else {
+        // Manual disconnect — reset reconnect counter
+        this.reconnectAttempts = 0;
       }
     });
 
@@ -189,15 +195,19 @@ class MinecraftBot extends EventEmitter {
     if (this.isReconnecting) return;
     this.isReconnecting = true;
     this.clearAFKIntervals();
+
+    // Exponential backoff: 10s → 20s → 40s → 80s → max 300s (5 min)
+    this.reconnectAttempts++;
+    const baseDelay = this.config.reconnectDelay || 10000;
+    const backoffDelay = Math.min(baseDelay * Math.pow(2, this.reconnectAttempts - 1), 300000);
     
-    const delay = this.config.reconnectDelay || 10000;
-    this.log(`Reconnecting in ${delay / 1000} seconds...`, 'system');
+    this.log(`Reconnecting in ${Math.round(backoffDelay / 1000)} seconds... (attempt #${this.reconnectAttempts})`, 'system');
     this.emit('status', { online: false, connecting: true });
 
     if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
     this.reconnectTimeout = setTimeout(() => {
       this.connect();
-    }, delay);
+    }, backoffDelay);
   }
 
   startPeriodicStatusUpdates() {
