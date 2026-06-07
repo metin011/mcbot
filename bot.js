@@ -115,15 +115,15 @@ class MinecraftBot extends EventEmitter {
       // Viewer only starts if explicitly enabled by user (to avoid chunk spam overloading server)
       if (this.config.viewerEnabled && this.viewerManager && viewerAvailable) {
         try {
-          // viewDistance: 2 — minimum chunk requests to avoid server overload
-          this.viewerManager.attachBot(this.bot, { viewDistance: 2, firstPerson: true });
+          // viewDistance: 1 = minimum (9 chunks) to reduce server load
+          this.viewerManager.attachBot(this.bot, { viewDistance: 1, firstPerson: true });
           viewerActive = true;
           this.log('3D viewer aktivdir — Canlı Görüntü panelində göstərilir.', 'success');
         } catch (err) {
           this.log(`3D viewer başladıla bilmədi: ${err.message}`, 'error');
         }
       } else if (!this.config.viewerEnabled) {
-        this.log('3D viewer deaktivdir — paneldən "Canlı Görüntü" düyməsi ilə aç.', 'system');
+        this.log('3D viewer deaktivdir — paneldə "Canlı Görüntü" düyməsi ilə aç.', 'system');
       } else if (!viewerAvailable) {
         this.log('3D viewer yüklənməyib. Terminalda: npm install canvas', 'warning');
       }

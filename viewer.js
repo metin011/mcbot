@@ -85,11 +85,16 @@ class ViewerManager {
 
     socket.emit('version', bot.version);
 
-    const worldView = new WorldView(bot.world, this.viewDistance, bot.entity.position, socket);
-    worldView.init(bot.entity.position);
+    let worldView;
+    try {
+      worldView = new WorldView(bot.world, this.viewDistance, bot.entity.position, socket);
+    } catch (err) {
+      console.error('[Viewer] Failed to create WorldView:', err.message);
+      return;
+    }
 
     worldView.on('blockClicked', (block, face, button) => {
-      bot.viewer.emit('blockClicked', block, face, button);
+      bot.viewer && bot.viewer.emit('blockClicked', block, face, button);
     });
 
     for (const id in this.primitives) {
@@ -98,20 +103,39 @@ class ViewerManager {
 
     const botPosition = () => {
       if (!bot.entity) return;
-      const packet = { pos: bot.entity.position, yaw: bot.entity.yaw, addMesh: true };
-      if (this.firstPerson) {
-        packet.pitch = bot.entity.pitch;
-      }
-      socket.emit('position', packet);
-      worldView.updatePosition(bot.entity.position);
+      try {
+        const packet = { pos: bot.entity.position, yaw: bot.entity.yaw, addMesh: true };
+        if (this.firstPerson) packet.pitch = bot.entity.pitch;
+        socket.emit('position', packet);
+        // Defer world view update to avoid blocking event loop
+        setImmediate(() => {
+          try { worldView.updatePosition(bot.entity.position); } catch (_) {}
+        });
+      } catch (_) {}
     };
 
     bot.on('move', botPosition);
-    worldView.listenToBot(bot);
+
+    // Defer listenToBot and init to next tick so bot keep-alive packets
+    // are not blocked by heavy chunk processing
+    setImmediate(() => {
+      try {
+        worldView.listenToBot(bot);
+      } catch (err) {
+        console.error('[Viewer] listenToBot error:', err.message);
+      }
+      setImmediate(() => {
+        try {
+          worldView.init(bot.entity.position);
+        } catch (err) {
+          console.error('[Viewer] worldView.init error:', err.message);
+        }
+      });
+    });
 
     this.socketCleanups.set(socket, () => {
-      bot.removeListener('move', botPosition);
-      worldView.removeListenersFromBot(bot);
+      try { bot.removeListener('move', botPosition); } catch (_) {}
+      try { worldView.removeListenersFromBot(bot); } catch (_) {}
     });
   }
 

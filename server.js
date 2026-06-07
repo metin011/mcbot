@@ -182,7 +182,7 @@ io.on('connection', (socket) => {
     saveConfig(config);
     if (enabled && mcBot.bot && mcBot.bot.entity && viewerAvailable) {
       try {
-        viewerManager.attachBot(mcBot.bot, { viewDistance: 2, firstPerson: true });
+        viewerManager.attachBot(mcBot.bot, { viewDistance: 1, firstPerson: true });
         mcBot.log('3D viewer manual olaraq aktivləşdirildi.', 'success');
         io.emit('viewer_state', { enabled: true });
       } catch (err) {
