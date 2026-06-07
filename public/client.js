@@ -265,6 +265,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function loadViewerFrame(viewerActive = true) {
+    if (!viewerActive) {
+      viewportIframe.src = '';
+      focusIndicator.classList.remove('hidden');
+      focusIndicator.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 3D viewer aktiv deyil — npm install canvas və serveri yenidən başlat';
+      return;
+    }
+    viewportIframe.src = `/viewer/?t=${Date.now()}`;
+  }
+
   // ==========================================================================
   // CONFIGURATION SUBMISSION
   // ==========================================================================
@@ -412,10 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Viewport adjustments
       viewportPlaceholder.style.display = 'none';
-      if (!viewportIframe.src) {
-        const iframeHost = window.location.hostname;
-        viewportIframe.src = `http://${iframeHost}:3007`;
-      }
+      loadViewerFrame(status.viewerActive !== false);
       setControlMode(controlMode, false);
     } else if (isBotConnecting) {
       connectionBadge.classList.add('badge-connecting');

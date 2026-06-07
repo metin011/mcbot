@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
 const MinecraftBot = require('./bot');
+const { ViewerManager, VIEWER_PREFIX } = require('./viewer');
 
 const app = express();
 const server = http.createServer(app);
@@ -62,8 +63,11 @@ function saveConfig(newConfig) {
 // Initialize config
 loadConfig();
 
+// 3D viewer on the same web server (/viewer)
+const viewerManager = new ViewerManager(app, server);
+
 // Instantiate bot
-const mcBot = new MinecraftBot(config);
+const mcBot = new MinecraftBot(config, viewerManager);
 
 // Circular logs buffer (store last 150 log entries to show new clients)
 const logsBuffer = [];
@@ -240,6 +244,7 @@ server.listen(PORT, () => {
   console.log(`==================================================`);
   console.log(`MagmaNode AFK Bot Web Dashboard is live!`);
   console.log(`Open in your browser: http://localhost:${PORT}`);
+  console.log(`3D viewer path: http://localhost:${PORT}${VIEWER_PREFIX}`);
   console.log(`==================================================`);
 });
 

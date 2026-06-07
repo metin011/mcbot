@@ -1,17 +1,20 @@
 const mineflayer = require('mineflayer');
 const EventEmitter = require('events');
 
-let mineflayerViewer;
+let viewerAvailable = false;
 try {
-  mineflayerViewer = require('prismarine-viewer').mineflayer;
+  require('prismarine-viewer/viewer');
+  viewerAvailable = true;
 } catch (err) {
-  console.warn('prismarine-viewer could not be imported:', err.message);
+  console.warn('prismarine-viewer could not be loaded:', err.message);
+  console.warn('Install canvas: npm install canvas');
 }
 
 class MinecraftBot extends EventEmitter {
-  constructor(config) {
+  constructor(config, viewerManager = null) {
     super();
     this.config = config;
+    this.viewerManager = viewerManager;
     this.bot = null;
     this.active = false;
     this.reconnectTimeout = null;
@@ -106,14 +109,17 @@ class MinecraftBot extends EventEmitter {
       this.bot.physicsEnabled = true; // Re-enable physics once spawned in world
       this.log('Bot spawned in the world.', 'success');
       
-      // Start prismarine-viewer if loaded
-      if (mineflayerViewer) {
+      let viewerActive = false;
+      if (this.viewerManager && viewerAvailable) {
         try {
-          mineflayerViewer(this.bot, { port: 3007, firstPerson: true });
-          this.log('Prismarine 3D Viewer started on port 3007.', 'success');
+          this.viewerManager.attachBot(this.bot, { viewDistance: 8, firstPerson: true });
+          viewerActive = true;
+          this.log('3D viewer aktivdir — Canlı Görüntü panelində göstərilir.', 'success');
         } catch (err) {
-          this.log(`Failed to start 3D Viewer: ${err.message}`, 'error');
+          this.log(`3D viewer başladıla bilmədi: ${err.message}`, 'error');
         }
+      } else if (!viewerAvailable) {
+        this.log('3D viewer yüklənməyib. Terminalda: npm install canvas', 'warning');
       }
 
       this.emit('status', {
@@ -122,7 +128,7 @@ class MinecraftBot extends EventEmitter {
         username: this.bot.username,
         ping: this.bot.player.ping || 0,
         position: this.bot.entity?.position || { x: 0, y: 0, z: 0 },
-        viewerActive: !!mineflayerViewer
+        viewerActive
       });
 
       this.startAFK();
